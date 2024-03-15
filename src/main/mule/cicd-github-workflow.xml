@@ -22,7 +22,7 @@ http://www.mulesoft.org/schema/mule/chatgpt http://www.mulesoft.org/schema/mule/
 		<http:request-connection protocol="HTTPS" host="api.openai.com" />
 	</http:request-config>
 	<flow name="cicd-github-workflowFlow" doc:id="d55cad45-b3d1-4837-b5ec-3e58ba07a077" >
-		<http:listener doc:name="Listener" doc:id="8b9c8616-6af2-4078-bd80-e335347f013b" config-ref="HTTP_Listener_config" path="/cicd" allowedMethods="GET,POST"/>
+		<http:listener doc:name="Listener" doc:id="8b9c8616-6af2-4078-bd80-e335347f013b" config-ref="HTTP_Listener_config" path="/quickResponse" allowedMethods="GET,POST"/>
 		<logger level="INFO" doc:name="Logger Start" doc:id="576e3158-7ff5-4c75-beac-36089d01068a" message="MS: Started CiCD Project"/>
 		<http:request method="POST" doc:name="Request ChatGPT" doc:id="516c15de-dc35-465e-a25e-f967a23af0e2" config-ref="HTTP_Request_configuration" path="chat/completions">
 			<http:body ><![CDATA[#[%dw 2.0
@@ -30,7 +30,12 @@ output application/json
 ---
 {
     "model": "gpt-3.5-turbo",
-    "messages": payload
+    "messages": [
+    {
+        "role": "user",
+        "content": payload.question as String
+    }
+]
   }]]]></http:body>
 			<http:headers ><![CDATA[#[%dw 2.0
 output application/json
