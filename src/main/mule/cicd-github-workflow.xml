@@ -1,13 +1,19 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http"
-	xmlns="http://www.mulesoft.org/schema/mule/core"
-	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+<mule xmlns:secure-properties="http://www.mulesoft.org/schema/mule/secure-properties" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
 http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
-http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/secure-properties http://www.mulesoft.org/schema/mule/secure-properties/current/mule-secure-properties.xsd">
 	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="d2664b88-4fd1-4509-adfe-13e15a74fd08" >
 		<http:listener-connection host="0.0.0.0" port="8081" />
 	</http:listener-config>
+	<configuration-properties doc:name="Configuration properties" doc:id="70a2c1bc-a6b2-484e-b8e4-0d6052802198" file="properties/${mule.env}-properties.yaml" />
+	<secure-properties:config name="Secure_Properties_Config" doc:name="Secure Properties Config" doc:id="0a4916a9-1a03-4ce5-a489-9b4453826bb6" file="properties/${mule.env}-secure-properties.yaml" key="${mule.key}"/>
+	<global-property doc:name="Global Property" doc:id="85883d4b-91f5-45d6-acc8-112c7e16b6cc" name="mule.env" value="dev" />
+	<global-property doc:name="Global Property" doc:id="03961c27-7187-4b87-9117-6503e5af62d3" name="mule.key" value="s3cure@Property!" />
+	<configuration-properties doc:name="Configuration properties" doc:id="20a6a0b7-a725-4160-8485-b576d31df103" file="properties/common-env-properties.yaml" />
 	<flow name="cicd-github-workflowFlow" doc:id="d55cad45-b3d1-4837-b5ec-3e58ba07a077" >
 		<http:listener doc:name="Listener" doc:id="8b9c8616-6af2-4078-bd80-e335347f013b" config-ref="HTTP_Listener_config" path="/cicd"/>
 		<logger level="INFO" doc:name="Logger Start" doc:id="576e3158-7ff5-4c75-beac-36089d01068a" message="MS: Started CiCD Project"/>
@@ -16,8 +22,11 @@ http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/
 				<ee:set-payload><![CDATA[%dw 2.0
 output application/json
 ---
-"CICD Project is getting Deployed."]]></ee:set-payload>
+"CICD Project is getting Deployed." ++ p('msg') ++ p('secure::msg1')]]></ee:set-payload>
 			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="checkVar" ><![CDATA[p('msg') ++ p('secure::msg1')]]></ee:set-variable>
+			</ee:variables>
 		</ee:transform>
 		<logger level="INFO" doc:name="Logger End" doc:id="fe5cc539-2f33-41ef-aaad-41efbaea14e6" message="MS: Ended CiCD Project" />
 	</flow>

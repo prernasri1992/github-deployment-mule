@@ -1,3 +1,4 @@
 {
+  "secureProperties": ["mule.key"],
   "minMuleVersion": "4.5.0"
 }
