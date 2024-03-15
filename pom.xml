@@ -20,6 +20,16 @@
 	<build>
 		<plugins>
 			<plugin>
+    				<groupId>org.apache.maven.plugins</groupId>
+    				<artifactId>maven-install-plugin</artifactId>
+    				<version>2.5.2</version>
+			</plugin>
+			<plugin>
+    				<groupId>org.apache.maven.plugins</groupId>
+    				<artifactId>maven-deploy-plugin</artifactId>
+    				<version>2.8.2</version>
+			</plugin>
+			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-clean-plugin</artifactId>
 				<version>3.2.0</version>
@@ -29,6 +39,27 @@
 				<artifactId>mule-maven-plugin</artifactId>
 				<version>${mule.maven.plugin.version}</version>
 				<extensions>true</extensions>
+			</plugin>
+			<plugin>
+				<groupId>org.mule.tools.maven</groupId>
+				<artifactId>mule-maven-plugin</artifactId>
+				<version>${mule.maven.plugin.version}</version>
+				<extensions>true</extensions>
+				<configuration>
+					<sharedLibraries/>
+					<cloudHubDeployment>
+						<uri>https://anypoint.mulesoft.com</uri>
+						<muleVersion>4.5</muleVersion>
+						<username>prernamarch2024</username>
+						<password>Prerna@1392</password>
+						<applicationName>cicd-githubaction-test</applicationName>
+						<businessGroup>Conde</businessGroup>
+						<objectStoreV2>true</objectStoreV2>
+						<workers>1</workers>
+						<workerType>MICRO</workerType>
+						<environment>Sandbox</environment>
+					</cloudHubDeployment>
+				</configuration>
 			</plugin>
 		</plugins>
 	</build>
