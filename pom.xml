@@ -50,7 +50,7 @@
 					<cloudHubDeployment>
 						<uri>https://anypoint.mulesoft.com</uri>
 						<muleVersion>4.5</muleVersion>
-						<username>prernamarch2024</username>
+						<username>prernamay2024</username>
 						<password>Prerna@1392</password>
 						<applicationName>cicd-githubaction-test</applicationName>
 						<businessGroup>Conde</businessGroup>
