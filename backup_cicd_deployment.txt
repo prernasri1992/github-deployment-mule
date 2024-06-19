@@ -1,0 +1,147 @@
+deployment.yml
+----------------
+
+name: Build and Deploy To Sandbox
+
+on:
+  push:
+    branches: [ develop ]
+  #pull_request:
+    #branches: [ develop ]
+  #workflow_dispatch: 
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps: 
+    - name: Checkout this repo
+      uses: actions/checkout@v4
+    - name: Cache dependencies
+      uses: actions/cache@v4
+      with:
+        path: ~/.m2/repository
+        key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+        restore-keys: |
+          ${{ runner.os }}-maven-
+    - name: Set up JDK 1.8
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'zulu'
+        java-version: 8
+    - name: maven-settings-xml-action
+      uses: whelk-io/maven-settings-xml-action@v16
+      with:
+        plugin_groups: >
+         ["org.mule.tools"]
+        servers: >
+          [ {"id": "MuleRepository", "username": "condenastinternational.nexus", "password": "NoPassword" },
+            {"id": "anypoint-exchange-v2", "username": "NoPassword", "password": "NoPassword" },
+            {"id": "anypoint-exchange-v3", "username": "NoPassword", "password": "NoPassword" },
+            {"id": "cn-mule-github-REPOSITORY", "username": "NoPassword", "password": "NoPassword" },
+            { "id": "PrivateExchangeRepository", "username": "NoPassword", "password": "NoPassword" }]
+        profiles: >
+         [{"id": "Mule", "activation": { "activateByDefault": true}}]
+        repositories: >
+          [ {"id": "PrivateExchangeRepository","name": "Private Exchange repository","url": "<<>>","layout": "default","releases": {  "enabled": "true"},"snapshots": {  "enabled": "true"}  },
+            {"id": "central","url": "https://repo.maven.apache.org/maven2"  }, 
+            {"id": "cn-mule-github-REPOSITORY","name": "GitHub CN Mule Apache Maven Packages","url": "https://maven.pkg.github.com/CondeNast/mule-maven-releases.git","releases": {  "enabled": "true"},"snapshots": {  "enabled": "true"}  },  
+            {"id": "MuleRepository","name": "MuleRepository","url": "https://repository.mulesoft.org/nexus-ee/content/repositories/releases-ee/","layout": "default","releases": {  "enabled": "true"},"snapshots": {  "enabled": "true"}  },  
+            {"id": "anypoint-exchange-v2","name": "Anypoint Exchange","url": "https://maven.anypoint.mulesoft.com/api/v2/maven","layout": "default","releases": {  "enabled": "true"},"snapshots": {  "enabled": "true"}  },  
+            {"id": "anypoint-exchange-v3","name": "Anypoint Exchange","url": "https://maven.anypoint.mulesoft.com/api/v3/maven","layout": "default","releases": {  "enabled": "true"},"snapshots": {  "enabled": "true"}  },  
+            {"id": "mulesoft-releases","name": "MuleSoft Releases Repository","url": "https://repository.mulesoft.org/nexus/content/repositories/releases/","layout": "default","releases": {  "enabled": "true"},"snapshots": {  "enabled": "true"}  },  
+            {"id": "mulesoft-snapshots","name": "MuleSoft Snapshots Repository","url": "https://repository.mulesoft.org/nexus/content/repositories/snapshots/","layout": "default","releases": {  "enabled": "true"},"snapshots": {  "enabled": "true"}  }]
+        plugin_repositories: >
+           [{ "id": "mulesoft-plugin-releases", "name": "MuleSoft Plugin Releases Repository", "url": "https://repository.mulesoft.org/nexus/content/repositories/releases/", "layout": "default"},  
+            { "id": "mulesoft-plugin-snapshots", "name": "MuleSoft Plugin Snapshots Repository", "url": "https://repository.mulesoft.org/nexus/content/repositories/snapshots/", "layout": "default"}]
+        
+    - name: Test with Maven
+      id: munit
+      run:
+        mvn test -Dmule.encryption.key="NoPassword"
+
+    - name: Munit Slack Notification Start  
+      env:
+        SLACK_WEBHOOK_URL: '<<>>'
+      uses: act10ns/slack@v2
+      with: 
+        status: ${{ steps.munit.outcome }}
+        steps: ${{ toJson(steps) }}
+        channel: '#mule-gitactions-cicd-notifications'
+        message: " ${{steps.munit.outcome}} - MUNIT Test"
+      if: always()
+    
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+    - name: Checkout this repo
+      uses: actions/checkout@v4
+    - name: Cache dependencies
+      uses: actions/cache@v4
+      with:
+        path: ~/.m2/repository
+        key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+        restore-keys: |
+          ${{ runner.os }}-maven-
+          
+    - name: Build with Maven
+      id: build
+      run: mvn clean package --file pom.xml -DskipMunitTests
+      
+    - name: Stamp artifact file name with commit hash
+      run: |
+        artifactName1=$(ls target/*.jar | head -1)
+        commitHash=$(git rev-parse --short "$GITHUB_SHA")
+        artifactName2=$(ls target/*.jar | head -1 | sed "s/.jar/-$commitHash.jar/g")
+        mv $artifactName1 $artifactName2
+        
+    - name: Upload artifact 
+      uses: actions/upload-artifact@v4
+      with:
+          name: artifacts
+          path: target/*.jar
+
+    - name: Build Slack Notification Start  
+      env:
+        SLACK_WEBHOOK_URL: '<<>>'
+      uses: act10ns/slack@v2
+      with: 
+        status: ${{ steps.build.outcome }}
+        steps: ${{ toJson(steps) }}
+        channel: '#mule-gitactions-cicd-notifications'
+        message: " ${{steps.build.outcome}} - BUILD PROJECT"
+      if: always()
+        
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:    
+    - name: Checkout this repo
+      uses: actions/checkout@v4
+    - name: Cache dependencies
+      uses: actions/cache@v4
+      with:
+        path: ~/.m2/repository
+        key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+        restore-keys: |
+          ${{ runner.os }}-maven-
+    - uses: actions/download-artifact@v4
+      with:
+        name: artifacts
+    - name: Deploy to Sandbox
+      env:
+        ANYPOINT_USR: ${{ secrets.ANYPOINT_PLATFORM_USERNAME }}
+        ANYPOINT_PSW: ${{ secrets.ANYPOINT_PLATFORM_PASSWORD }}
+        ANYPOINT_CLIENT_SECRET: ${{secrets.anypoint_client_secret}}
+      run: |
+        BRANCH=$(echo ${{ github.ref }} | sed 's/.*\///')
+        echo -e "💡 Working Branch is: [$BRANCH]"
+        artifactName=$(ls *.jar | head -1)
+        mvn deploy -P $BRANCH -DmuleDeploy \
+         -Dmule.artifact=$artifactName \
+         -Danypoint.username="NoPassword" \
+         -Danypoint.password="NoPassword"
